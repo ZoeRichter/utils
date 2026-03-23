@@ -1,0 +1,82 @@
+\documentclass[12pt, letterpaper]{article}
+\title{Serpent Cross-section Library Tutorial}
+\author{Zo\"e Richter}
+\date{March 2026}
+
+\usepackage{hyperref}
+
+\begin{document}
+\maketitle
+
+\section{Setup}
+Before you get started, you will need to do the following:
+\begin{itemize}
+\item Install perl
+\item Download the xsdirconvert.pl script from the \href{https://serpent.vtt.fi/docs/data/interaction_data.html#repository-interaction-data}{Serpent Data Repository}.
+\item ACE format data libraries for the nuclear data library you want to use:
+	\begin{itemize}
+	\item You will need the continuous energy cross section data (for example, \href{https://nucleardata.lanl.gov/ace/lib80x}{Lib80x}, which is based on ENDF/B-VIII.0).
+	\item You will need the thermal scattering data (for example, \href{https://nucleardata.lanl.gov/ace/endf80sab2}{ENDF80SaB2}, which is also based on ENDF/B-VIII.0)
+	\end{itemize}
+\item Set the \verb|SERPENT_DATA| environment variable in your .bashrc - this tutorial assumes you're setting it to \verb|/home/USER/PATH/TO/SERPENT/xsdata|.
+\end{itemize}
+
+Unpack the library data before moving on.  I would recommend creating a temp/ or scratch/ directory inside your Serpent xsdata directory to hold the compressed files and extract them into.  The tutorial will use \verb|scratch/|
+
+
+\section{Creating an xsdata file for Serpent}
+See the \href{https://serpent.vtt.fi/docs/installation/data_libraries.html#install-libraries}{Serpent docs on setting up data libraries} as well.
+
+In theory, the process for creating an xsdata file for Serpent is as simple as running \verb|perl xsdirconvert.pl input.xsdir > output.xsdata| on the xsdir file LANL provides with its ACE format libraries.  In practice, the provided file may not be exactly what you need out of the box, and you will need to add or remove some information.
+
+The xsdir file needs to take the general form of
+\begin{verbatim}
+datapath=
+atomic weight ratios
+ZAIDe1i1 [wt] ... ZAIDe1iI [wt] 
+.
+.
+.
+ZAIDeNi1 [wt] ... ZAIDeNiI [wt] 
+
+directory
+ZAIDi1 [wt] relative/path/to/isotope/acedata [parameters]
+.
+.
+.
+ZAIDiN [wt] relative/path/to/isotope/acedata [parameters]
+[therm mat]1 [wt] rel/path/to/therm/data [parameters]
+.
+.
+.
+[therm mat]N [wt] rel/path/to/therm/data [parameters]
+\end{verbatim}
+
+LANL may provide a more complex xsdir file for use, however, it will likely be much easier to create a xsdir by doing the following:
+
+\begin{itemize}
+\item Move into your \verb|xsdata/| directory, and make a new directory for holding the xsdata for the library you're making, e.g., \verb|endfX/| (which will be used as a placeholder name for this tutorial.  Inside \verb|endfX/|, create a directory called \verb|acedata/|
+\item Move \verb|xsdirconvert.pl| to \verb|xsdata/|
+\item Inside the uncompressed directories containing your ACE cross section data inside \verb|scratch/|, you should see a folder with the same name as the parent folder (such as \verb|Lib80x/| inside \verb|scratch/Lib80x/|), a file called \verb|xsdir|, and some miscellaneous files or directories for docs.  
+	\begin{itemize}
+	\item Move the sub-directory with the identical name into \verb|acedata/| for both the cross section library and the thermal scattering library.
+	\item Copy the \verb|xsdir| file from the cross section library into \verb|xsdata/| under a new name, such as \verb|endfX_combined.xsdir|.
+	\item On the last line of \verb|endfX_combined.xsdir|, add a new line, then add a line with 'directory', then move to a new line.  Copy the text in the thermal scattering \verb|xsdir| to the new line so you match the format laid out above.
+	\item Double check the relative paths to your data are correct (make sure you have \verb|path/to/acedata.file|, not \verb|/path/to/acedata.file|
+	\end{itemize}
+\item Move back to the top of \verb|endfX_combined.xsdir|.  Now you are adding the preamble:
+\begin{verbatim}
+datapath=PATH
+atomic weight ratios
+[rest of xsdir here]
+\end{verbatim}
+\item Now you need to set the data path.  It is the relative path to the directories containing the cross section and thermal scattering files.  So in the setup the tutorial uses, you would use \verb|datapath=endfX/acedata/|.
+\item Run \verb|perl xsdirconvert endfX_combined.xsdir > endfX_combined.xsdata|.  The result should be a new xsdata file with cross section entries first, then thermal scattering library entries.
+\end{itemize}
+
+And now you should be ready to go.  With your \verb|SERPENT_DATA| environment variable set to \verb|xsdata/|, you would set your acelib inside a Serpent2 input file with \verb|set acelib "endfX_combined.xsdata"|
+
+
+
+
+\end{document}
